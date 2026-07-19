@@ -82,6 +82,17 @@ label.file-btn:hover{border-color:var(--cian);color:var(--cian)}
 /* crédito de autor */
 .credito{display:flex;align-items:center;gap:.45rem;font-size:.64rem;color:var(--tenue);letter-spacing:.05em;white-space:nowrap}
 .credito svg{display:block;opacity:.9}
+.credito img{height:16px;display:block;opacity:.95}
+.creditoShow img{height:20px;display:block;opacity:.9}
+
+/* guía */
+#dlgGuia{max-width:640px}
+.guia{font-size:.82rem;line-height:1.65;max-height:62vh;overflow-y:auto;padding-right:.5rem}
+.guia h4{color:var(--oro);margin:1rem 0 .3rem;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase}
+.guia h4:first-child{margin-top:0}
+.guia ol,.guia ul{padding-left:1.2rem;display:grid;gap:.3rem}
+.guia b{color:var(--cian)}
+.guia kbd{border:1px solid var(--linea);border-radius:4px;padding:0 .35em;font-size:.78em;background:var(--bg)}
 .creditoShow{position:absolute;bottom:1.1rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.55rem;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);z-index:1}
 .creditoShow svg{opacity:.85}
 
@@ -168,6 +179,7 @@ dialog h3{font-family:'Fraunces',serif;margin-bottom:1rem}
   <button class="btn" onclick="exportarPaquete()">📦 Paquete .md</button>
   <button class="btn primario" onclick="exportarHTML()">⬇ Exportar HTML</button>
   <button class="btn presentar" onclick="presentar()">▶ Presentar</button>
+  <button class="btn" onclick="dlgGuia.showModal()">❓ Guía</button>
   <span class="credito"><span id="logoJA"></span>por Jorge Andrés Casas Acero</span>
 </header>
 
@@ -290,6 +302,41 @@ dialog h3{font-family:'Fraunces',serif;margin-bottom:1rem}
 <dialog id="dlgCargar"><h3>Proyectos guardados</h3><div class="lista-proy" id="listaProy"></div>
 <button class="btn" onclick="dlgCargar.close()" style="margin-top:.6rem">Cerrar</button></dialog>
 
+<dialog id="dlgGuia"><h3>📖 Guía rápida</h3>
+<div class="guia">
+<h4>Flujo recomendado</h4>
+<ol>
+<li><b>Identidad</b> (Mundo): nombre, metáfora espacial y paleta de atmósfera.</li>
+<li><b>Fondo</b>: sube imagen, GIF o video en loop para la escena activa. Cada escena puede tener su propio fondo — cámbialo con el chip de escena seleccionado.</li>
+<li><b>🔍 Analizar fondo</b>: la IA ubica los nodos sobre el recorrido natural de la imagen y deriva colores acordes.</li>
+<li><b>Nodos</b>: edita nombres y pantallas (título, viñetas, dato ancla). Usa <b>👁</b> para previsualizar la pantalla de cada nodo.</li>
+<li><b>⚡ IA</b>: adjunta un PDF o pega texto y genera el mundo completo (un nodo por tema).</li>
+<li><b>🎯 Ajustar</b>: afina posiciones en pantalla completa · <b>▶ Presentar</b> cuando esté listo.</li>
+</ol>
+<h4>Escenas y fondos</h4>
+<ul>
+<li>Máx. <b>5 nodos por escena</b>; al superar, se crea otra escena automáticamente.</li>
+<li>El chip de escena muestra <b>🖼</b> si tiene fondo propio. El botón «🖼 fondo» de la barra sube fondo a la escena activa.</li>
+<li>Videos: loop corto de 5–15 s, silenciado, máx. 40 MB.</li>
+</ul>
+<h4>Personaje y burbujas</h4>
+<ul>
+<li>Selecciona un nodo y usa los deslizadores: <b>escala del personaje</b> (perspectiva) y <b>tamaño de la burbuja</b>.</li>
+<li>Sube PNG con transparencia para personaje propio + pose final de celebración.</li>
+</ul>
+<h4>Atajos</h4>
+<ul>
+<li><kbd>Ctrl/⌘ Z</kbd> deshacer · <kbd>←</kbd><kbd>→</kbd> pantallas/escenas en presentación · <kbd>Esc</kbd> salir.</li>
+</ul>
+<h4>Guardado y export</h4>
+<ul>
+<li>Borrador automático cada edición; al recargar se ofrece recuperarlo. <b>💾 Guardar</b> lo consolida (límite 4.5 MB — mira el indicador inferior).</li>
+<li><b>⬇ Exportar HTML</b>: presentación standalone con todo incluido, lista para compartir.</li>
+<li><b>📦 Paquete .md</b>: guion de producción · <b>📋 Prompts</b>: recetas de imágenes para tu mundo.</li>
+</ul>
+</div>
+<button class="btn" onclick="dlgGuia.close()" style="margin-top:.8rem">Cerrar</button></dialog>
+
 <script>
 /* ================== ESTADO ================== */
 const PRESETS=[
@@ -310,6 +357,14 @@ const LOGO_SVG=`<svg width="16" height="19" viewBox="0 0 100 118" xmlns="http://
 <path d="M48 64 L70 64"/>
 <path d="M12 50 L12 70 Q13 81 26 89 L45 100 L79 84"/>
 </g></svg>`;
+/* Si existe assets/logo.png (el logo real), se usa en lugar del SVG — como data URI
+   para que el Export HTML también lo lleve embebido */
+let LOGO_IMG=null;
+function logoHTML(px){return LOGO_IMG?`<img src="${LOGO_IMG}" alt="JA" style="height:${px}px">`:LOGO_SVG}
+fetch('assets/logo.png').then(r=>{if(!r.ok)throw 0;return r.blob()}).then(b=>{
+ if(!b.type.startsWith('image'))throw 0;
+ const fr=new FileReader();fr.onload=()=>{LOGO_IMG=fr.result;
+  document.getElementById('logoJA').innerHTML=logoHTML(16)};fr.readAsDataURL(b)}).catch(()=>{});
 let P=null,escenaSel=0,nodoSel=0,viajero={x:0,y:0,anim:null,iniciado:false},pdfAdjunto=null;
 
 /* Historial para deshacer (Ctrl+Z) */
@@ -369,10 +424,14 @@ function pintarPresets(){
 function pintarEscenas(){
  const mk=(cont,extra)=>{cont.innerHTML='';
   P.escenas.forEach((e,i)=>{const b=document.createElement('button');
-   b.className='chip'+(i===escenaSel?' on':'');b.textContent='Escena '+(i+1)+' ('+e.nodos.length+')';
+   b.className='chip'+(i===escenaSel?' on':'');b.textContent='Escena '+(i+1)+' ('+e.nodos.length+')'+(e.fondoImg?' 🖼':'');
+   b.title=e.fondoImg?'Tiene fondo propio':'Sin fondo propio';
    b.onclick=()=>{escenaSel=i;nodoSel=0;viajero.iniciado=false;sync()};cont.appendChild(b)});
   if(extra){const n=document.createElement('button');n.className='chip';n.textContent='＋ escena';
    n.onclick=()=>{P.escenas.push({fondoImg:EA().fondoImg,nodos:[]});escenaSel=P.escenas.length-1;nodoSel=0;sync()};cont.appendChild(n);
+   const f=document.createElement('button');f.className='chip';f.textContent='🖼 fondo';
+   f.title='Subir fondo para la escena seleccionada';
+   f.onclick=()=>document.getElementById('fFondo').click();cont.appendChild(f);
    if(P.escenas.length>1){const q=document.createElement('button');q.className='chip';q.textContent='✕ borrar escena';
     q.onclick=()=>{if(confirm('¿Borrar la escena actual y sus nodos?')){snap();P.escenas.splice(escenaSel,1);escenaSel=0;nodoSel=0;sync()}};cont.appendChild(q)}}};
  mk(document.getElementById('chipsEscenas'),true);
@@ -385,6 +444,7 @@ function pintarNodos(){
   const d=document.createElement('div');d.className='nodo-item'+(i===nodoSel?' sel':'');
   d.innerHTML=`<div class="cab"><span style="color:var(--oro)">${String(numOffset(escenaSel)+i+1).padStart(2,'0')}</span>
    <input value="${esc(n.nombre)}" onchange="EA().nodos[${i}].nombre=this.value;sync()">
+   <button class="mini-btn" title="Vista previa de la pantalla de este nodo" onclick="previewNodo(${i});event.stopPropagation()">👁</button>
    <button class="mini-btn" onclick="borrarNodo(${i});event.stopPropagation()">✕</button></div>`;
   d.onclick=()=>{nodoSel=i;sync();irViajero(i)};l.appendChild(d)});
  const total=P.escenas.reduce((s,e)=>s+e.nodos.length,0);
@@ -394,8 +454,10 @@ function pintarNodos(){
 function pintarPantallas(){
  const e=document.getElementById('editorPantallas');const n=EA().nodos[nodoSel];
  if(!n){e.innerHTML='';return}
- let h=`<label style="margin-top:1.2rem">Escala del personaje en este nodo (perspectiva): <b style="color:var(--oro)">${(n.esc??1).toFixed(2)}×</b></label>
- <input type="range" min="0.5" max="1.5" step="0.05" value="${n.esc??1}" oninput="EA().nodos[${nodoSel}].esc=+this.value;pintarPantallas();pintarTablero()">
+ let h=`<label style="margin-top:1.2rem">Escala del personaje en este nodo (perspectiva): <b style="color:var(--oro)" id="escVal">${(n.esc??1).toFixed(2)}×</b></label>
+ <input type="range" min="0.5" max="1.5" step="0.05" value="${n.esc??1}" oninput="ajustarEscPersonaje(${nodoSel},+this.value)">
+ <label style="margin-top:1.2rem">Tamaño de la burbuja de este nodo: <b style="color:var(--oro)" id="tamVal">${(n.tam??1).toFixed(2)}×</b></label>
+ <input type="range" min="0.6" max="1.6" step="0.05" value="${n.tam??1}" oninput="ajustarTamNodo(${nodoSel},+this.value)">
  <label style="margin-top:1.2rem">Pantallas del nodo «${esc(n.nombre)}»</label>`;
  n.pantallas.forEach((p,j)=>{h+=`<div class="pantalla">
   <input placeholder="Título" value="${esc(p.titulo)}" onchange="EA().nodos[${nodoSel}].pantallas[${j}].titulo=this.value">
@@ -404,6 +466,15 @@ function pintarPantallas(){
   <button class="mini-btn" onclick="EA().nodos[${nodoSel}].pantallas.splice(${j},1);sync()">✕ quitar pantalla</button></div>`});
  h+=`<button class="add" onclick="EA().nodos[${nodoSel}].pantallas.push({titulo:'',vinetas:[],ancla:''});sync()">＋ pantalla</button>`;
  e.innerHTML=h}
+
+/* Sliders sin reconstruir el panel (reconstruirlo interrumpía el arrastre):
+   solo actualizan la cifra y repintan el tablero. El avatar salta al nodo
+   editado para ver la escala en vivo. */
+function ajustarEscPersonaje(i,v){const n=EA().nodos[i];if(!n)return;n.esc=v;
+ document.getElementById('escVal').textContent=v.toFixed(2)+'×';
+ viajero.x=n.x;viajero.y=n.y;viajero.s=v;viajero.iniciado=true;pintarTablero()}
+function ajustarTamNodo(i,v){const n=EA().nodos[i];if(!n)return;n.tam=v;
+ document.getElementById('tamVal').textContent=v.toFixed(2)+'×';pintarTablero()}
 
 function agregarNodo(){snap();
  if(EA().nodos.length>=5){
@@ -440,10 +511,11 @@ function pintarTablero(){
  const st=estiloDe(EA());
  EA().nodos.forEach((n,i)=>{
   const b=document.createElement('div');b.className='burbuja'+(i===nodoSel?' sel':'');
-  b.style.left=n.x+'%';b.style.top=n.y+'%';
+  const tm=n.tam??1;
+  b.style.left=n.x+'%';b.style.top=n.y+'%';b.style.width=(13*tm)+'%';
   b.style.borderColor=st.borde;b.style.background=st.relleno;
-  b.innerHTML=`<span class="num" style="color:${st.acento}">${String(numOffset(escenaSel)+i+1).padStart(2,'0')}</span>
-   <span class="eti-n" style="color:${st.texto}${n.nombre.length>9?';font-size:1.7cqh':''}">${esc(n.nombre)}</span><span class="pad" style="background:${st.padBg}"></span>`;
+  b.innerHTML=`<span class="num" style="color:${st.acento};font-size:${(4.6*tm).toFixed(2)}cqh">${String(numOffset(escenaSel)+i+1).padStart(2,'0')}</span>
+   <span class="eti-n" style="color:${st.texto};font-size:${((n.nombre.length>9?1.7:2.1)*tm).toFixed(2)}cqh">${esc(n.nombre)}</span><span class="pad" style="background:${st.padBg}"></span>`;
   hacerArrastrable(b,n,i);t.appendChild(b)});
  const av=document.getElementById('avatarPrev');
  av.innerHTML=P.avatarImg?`<img src="${P.avatarImg}" alt="">`:esc(P.avatar);
@@ -507,6 +579,9 @@ function cargarFondo(inp){const f=inp.files[0];if(!f)return;
  if(f.type.startsWith('video')&&f.size>40e6){
   aviso('⚠ Video muy pesado ('+Math.round(f.size/1e6)+' MB). Usa un loop corto de 5-15s en webm/mp4 comprimido (<40 MB).');return}
  const r=new FileReader();r.onload=()=>{EA().fondoImg=r.result;sync();
+  if(document.getElementById('show').classList.contains('on')){
+   aplicarFondo(document.getElementById('showFondo'),P.escenas[escShow]);
+   if(sIdx>-1)pintarInterior()}
   if(f.type.startsWith('video'))aviso('🎞 Video de fondo cargado: se reproduce en bucle, silenciado y sin capturar clics. Nota: los proyectos con video pueden superar el límite de Guardar; el Export HTML sí lo incluye.')};
  r.readAsDataURL(f)}
 function cargarImgGlobal(inp,campo){const f=inp.files[0];if(!f)return;
@@ -622,7 +697,15 @@ Reglas: MÁXIMO 5 nodos por escena — si hay más temas, crea más escenas en e
  btn.disabled=false}
 
 /* ================== MODO PRESENTACIÓN ================== */
-let escShow=0,sIdx=-1,sPant=0,sViajero={x:0,y:0},viajandoShow=false,modoAjuste=false;
+let escShow=0,sIdx=-1,sPant=0,sViajero={x:0,y:0},viajandoShow=false,modoAjuste=false,esPreview=false;
+
+/* Vista previa de un nodo: abre su pantalla interior sin pasar por la portada */
+function previewNodo(i){leerCampos();modoAjuste=false;esPreview=true;
+ document.getElementById('show').classList.add('on');
+ escShow=escenaSel;renderEscenaShow(true);
+ const po=document.getElementById('portada');po.style.opacity=0;po.style.pointerEvents='none';
+ zoomNodo(i)}
+function cambiarFondoPreview(){document.getElementById('fFondo').click()}
 
 /* Estilo de nodos derivado del análisis de la imagen (o defaults de la paleta) */
 function estiloDe(E){const s=(E&&E.estilo)||{};
@@ -636,7 +719,7 @@ function estiloDe(E){const s=(E&&E.estilo)||{};
  st.padBg=`radial-gradient(ellipse at center,rgba(255,255,255,.95) 0%,${st.brillo}88 45%,transparent 75%)`;
  return st}
 
-function ajustar(){leerCampos();modoAjuste=true;
+function ajustar(){leerCampos();modoAjuste=true;esPreview=false;
  document.getElementById('show').classList.add('on');
  escShow=escenaSel;renderEscenaShow(true);
  const po=document.getElementById('portada');po.style.opacity=0;po.style.pointerEvents='none';
@@ -653,7 +736,7 @@ function dragShow(el,n){let drag=false;
   el.style.left=n.x+'%';el.style.top=n.y+'%'});
  el.addEventListener('pointerup',()=>{drag=false})}
 
-function presentar(){leerCampos();modoAjuste=false;
+function presentar(){leerCampos();modoAjuste=false;esPreview=false;
  document.getElementById('show').classList.add('on');
  escShow=escenaSel;renderEscenaShow(true);
  const po=document.getElementById('portada');
@@ -661,7 +744,7 @@ function presentar(){leerCampos();modoAjuste=false;
  po.innerHTML=`<div class="velo"></div><h1>${esc(P.nombre)}</h1>
   <div class="sub" style="color:${P.paleta.acento}">${esc(P.metafora)}</div>
   <button class="btn" style="margin-top:3rem;border-color:${P.paleta.acento};color:${P.paleta.acento}" onclick="abrirTablero()">Iniciar la travesía →</button>
-  <div class="creditoShow">${LOGO_SVG} Realizado por Jorge Andrés Casas Acero</div>`;
+  <div class="creditoShow">${logoHTML(20)} Realizado por Jorge Andrés Casas Acero</div>`;
  document.getElementById('interior').classList.remove('on');sIdx=-1;
  document.getElementById('show').requestFullscreen?.().catch(()=>{});
  despertarShow()}
@@ -672,10 +755,11 @@ function renderEscenaShow(reset){
  aplicarFondo(document.getElementById('showFondo'),E);
  tab.querySelectorAll('.burbuja').forEach(b=>b.remove());
  E.nodos.forEach((n,i)=>{const b=document.createElement('div');b.className='burbuja';
-  b.style.left=n.x+'%';b.style.top=n.y+'%';b.style.width='11%';
+  const tm=n.tam??1;
+  b.style.left=n.x+'%';b.style.top=n.y+'%';b.style.width=(11*tm)+'%';
   b.style.borderColor=st.borde;b.style.background=st.relleno;
-  b.innerHTML=`<span class="num" style="color:${st.acento}">${String(numOffset(escShow)+i+1).padStart(2,'0')}</span>
-   <span class="eti-n" style="color:${st.texto}${n.nombre.length>9?';font-size:1.7cqh':''}">${esc(n.nombre)}</span><span class="pad" style="background:${st.padBg}"></span>`;
+  b.innerHTML=`<span class="num" style="color:${st.acento};font-size:${(4.6*tm).toFixed(2)}cqh">${String(numOffset(escShow)+i+1).padStart(2,'0')}</span>
+   <span class="eti-n" style="color:${st.texto};font-size:${((n.nombre.length>9?1.7:2.1)*tm).toFixed(2)}cqh">${esc(n.nombre)}</span><span class="pad" style="background:${st.padBg}"></span>`;
   if(modoAjuste){b.style.cursor='grab';dragShow(b,n)}else{b.onclick=()=>viajarShow(i)}
   tab.appendChild(b)});
  const av=document.getElementById('showAvatar');
@@ -742,7 +826,9 @@ function pintarInterior(intro){
    <span class="eti-esc" style="align-self:center;font-size:.72rem;letter-spacing:.15em;color:rgba(255,255,255,.6)">${sPant+1} / ${n.pantallas.length||1}</span>
    <button class="btn" onclick="pasarPant(-1)">← Anterior</button>
    <button class="btn" onclick="pasarPant(1)">${sPant+1>=(n.pantallas.length||1)?'Al tablero →':'Siguiente →'}</button>
-   <button class="btn" style="border-color:${st.acento};color:${st.acento}" onclick="volverTablero()">⌂ Volver al tablero</button>
+   ${esPreview?`<button class="btn" onclick="cambiarFondoPreview()">🖼 Cambiar fondo</button>
+   <button class="btn" style="border-color:${st.acento};color:${st.acento}" onclick="cerrarShow()">✓ Cerrar vista previa</button>`:
+   `<button class="btn" style="border-color:${st.acento};color:${st.acento}" onclick="volverTablero()">⌂ Volver al tablero</button>`}
   </div>`;
  if(intro){it.classList.add('morphIntro');
   requestAnimationFrame(()=>requestAnimationFrame(()=>it.classList.remove('morphIntro')))}}
@@ -754,7 +840,7 @@ function volverTablero(){
  document.getElementById('interior').classList.remove('on');
  const tab=document.getElementById('showTab');
  setTimeout(()=>{tab.style.transform='scale(1)';tab.style.opacity=1},60);sIdx=-1}
-function cerrarShow(){clearTimeout(quietoT);
+function cerrarShow(){clearTimeout(quietoT);esPreview=false;
  document.getElementById('show').classList.remove('on','quieto');
  document.exitFullscreen?.().catch(()=>{});
  const tab=document.getElementById('showTab');tab.style.transform='scale(1)';tab.style.opacity=1;sIdx=-1;
@@ -840,7 +926,7 @@ function exportarHTML(){leerCampos();
  +'#portada{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;transition:opacity .8s;z-index:8;background-size:cover;background-position:center}'
  +'#portada>*{position:relative;z-index:1}#portada h1{font-weight:700;font-size:clamp(3rem,8vw,6.5rem);color:#fff}'
  +'#portada .sub{letter-spacing:.4em;text-transform:uppercase;margin-top:1.2rem;font-size:clamp(.68rem,1.3vw,.95rem)}'
- +'.creditoShow{position:absolute;bottom:1.1rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.55rem;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);z-index:1}.creditoShow svg{opacity:.85}'
+ +'.creditoShow{position:absolute;bottom:1.1rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.55rem;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);z-index:1}.creditoShow svg{opacity:.85}.creditoShow img{height:20px;display:block;opacity:.9}'
  +'button{background:rgba(0,0,0,.35);border:1px solid;padding:.7rem 1.6rem;border-radius:6px;font-family:inherit;font-size:.8rem;cursor:pointer;letter-spacing:.1em;backdrop-filter:blur(6px)}'
  +'#escNav{position:fixed;top:1.3rem;left:50%;transform:translateX(-50%);z-index:7;display:flex;gap:.6rem;align-items:center}'
  +'#escNav span{font-size:.72rem;letter-spacing:.2em;color:rgba(255,255,255,.7);text-transform:uppercase}'
@@ -866,7 +952,7 @@ function exportarHTML(){leerCampos();
  +'<div id="escNav"></div><div id="portada"></div><div id="interior"></div><div id="hud"></div>'
  +'<scr'+'ipt>\n'
  +'const P='+datos+';\n'
- +'const LOGOJA='+JSON.stringify(LOGO_SVG)+';\n'
+ +'const LOGOJA='+JSON.stringify(logoHTML(20))+';\n'
  +String.raw`let v={x:0,y:0},viajando=false,sIdx=-1,sPant=0,esc=0;
 const F=p=>'radial-gradient(120% 90% at 20% 0%, '+p.fondo2+'55 0%, transparent 60%),linear-gradient(180deg,'+p.fondo2+' 0%,'+p.fondo+' 70%,#000 140%)';
 const E=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
@@ -896,8 +982,10 @@ function render(reset){const Ec=P.escenas[esc],t=document.getElementById('tab'),
  fondoDe(document.getElementById('fondo'));
  t.querySelectorAll('.burbuja').forEach(b=>b.remove());
  Ec.nodos.forEach((n,i)=>{const b=document.createElement('div');b.className='burbuja';
-  b.style.left=n.x+'%';b.style.top=n.y+'%';b.style.borderColor=st.borde;b.style.background=st.relleno;
-  b.innerHTML='<span class="num" style="color:'+st.acento+'">'+String(off(esc)+i+1).padStart(2,'0')+'</span><span class="eti-n" style="color:'+st.texto+(n.nombre.length>9?';font-size:1.6cqh':'')+'">'+E(n.nombre)+'</span><span class="pad" style="background:'+st.padBg+'"></span>';
+  const tm=n.tam||1;
+  b.style.left=n.x+'%';b.style.top=n.y+'%';b.style.width=(11*tm)+'%';
+  b.style.borderColor=st.borde;b.style.background=st.relleno;
+  b.innerHTML='<span class="num" style="color:'+st.acento+';font-size:'+(4.6*tm).toFixed(2)+'cqh">'+String(off(esc)+i+1).padStart(2,'0')+'</span><span class="eti-n" style="color:'+st.texto+';font-size:'+((n.nombre.length>9?1.6:2)*tm).toFixed(2)+'cqh">'+E(n.nombre)+'</span><span class="pad" style="background:'+st.padBg+'"></span>';
   b.onclick=()=>viajar(i);t.appendChild(b)});
  const a=document.getElementById('avatar');
  a.innerHTML=P.avatarImg?'<img src="'+P.avatarImg+'" alt="">':E(P.avatar);
@@ -982,11 +1070,18 @@ addEventListener('keydown',e=>{
 
 /* ================== INIT ================== */
 document.getElementById('logoJA').innerHTML=LOGO_SVG;
-P=proyectoBase();
+P=proyectoBase();sync();
+/* Recuperación de borrador: banner no bloqueante (un confirm() aquí congela la carga) */
 try{const b=localStorage.getItem('forja:__borrador');
  if(b&&b!==JSON.stringify(proyectoBase())){const bp=migrar(JSON.parse(b));
-  if(bp.nombre&&confirm('Hay un borrador sin guardar («'+bp.nombre+'»). ¿Recuperarlo?'))P=bp}}catch(e){}
-sync();
+  if(bp.nombre){const bn=document.createElement('div');bn.id='bannerRec';
+   bn.style.cssText='position:fixed;top:4rem;left:50%;transform:translateX(-50%);z-index:85;background:var(--panel2);border:1px solid var(--oro);border-radius:8px;padding:.7rem 1rem;display:flex;gap:.7rem;align-items:center;font-size:.8rem;box-shadow:0 10px 30px rgba(0,0,0,.5)';
+   bn.innerHTML='📝 Hay un borrador sin guardar («'+esc(bp.nombre)+'»)';
+   const br=document.createElement('button');br.className='btn primario';br.textContent='Recuperar';
+   br.onclick=()=>{snap();P=bp;escenaSel=0;nodoSel=0;viajero.iniciado=false;sync();bn.remove();toast('📝 Borrador recuperado','ok')};
+   const bd=document.createElement('button');bd.className='btn';bd.textContent='Descartar';
+   bd.onclick=()=>{localStorage.removeItem('forja:__borrador');bn.remove()};
+   bn.appendChild(br);bn.appendChild(bd);document.body.appendChild(bn)}}}catch(e){}
 </script>
 </body>
 </html>

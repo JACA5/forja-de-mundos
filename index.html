@@ -74,6 +74,21 @@ label.file-btn:hover{border-color:var(--cian);color:var(--cian)}
 #tableroVacio .icono{font-size:1.8rem}
 #tableroVacio .sub{font-size:.74rem;color:rgba(255,255,255,.4);max-width:34ch;line-height:1.5}
 
+/* checklist de progreso en la barra inferior */
+#barraInfo .chk{display:flex;gap:.7rem}
+#barraInfo .chk span{color:var(--tenue)}
+#barraInfo .chk span.ok{color:var(--ok)}
+
+/* presentación: controles se ocultan tras inactividad; viñetas con stagger */
+#salirShow,#escNav{transition:opacity .4s}
+#show.quieto #salirShow,#show.quieto #escNav{opacity:0;pointer-events:none}
+@keyframes aparLi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+#interior.on li{animation:aparLi .45s both}
+#interior.on li:nth-child(2){animation-delay:.12s}
+#interior.on li:nth-child(3){animation-delay:.24s}
+#interior.on li:nth-child(4){animation-delay:.36s}
+#interior.on li:nth-child(5){animation-delay:.48s}
+
 /* preview */
 #zonaPreview{display:flex;flex-direction:column;overflow:hidden}
 #escenasBar{display:flex;gap:.4rem;align-items:center;padding:.5rem 1.2rem;border-bottom:1px solid var(--linea);background:var(--panel);flex-shrink:0}
@@ -247,6 +262,7 @@ dialog h3{font-family:'Fraunces',serif;margin-bottom:1rem}
     <span>Clic en burbuja: <b>editar nodo</b> (el viajero navega)</span>
     <span id="infoNodos"></span>
     <span style="flex:1"></span>
+    <span class="chk" id="checklist"></span>
     <button class="btn" style="padding:.3rem .7rem" onclick="ajustar()">🎯 Ajustar a pantalla completa</button>
   </div>
 </section>
@@ -389,7 +405,7 @@ function pintarTablero(){
   b.style.left=n.x+'%';b.style.top=n.y+'%';
   b.style.borderColor=st.borde;b.style.background=st.relleno;
   b.innerHTML=`<span class="num" style="color:${st.acento}">${String(numOffset(escenaSel)+i+1).padStart(2,'0')}</span>
-   <span class="eti-n" style="color:${st.texto}">${esc(n.nombre)}</span><span class="pad" style="background:${st.padBg}"></span>`;
+   <span class="eti-n" style="color:${st.texto}${n.nombre.length>9?';font-size:1.7cqh':''}">${esc(n.nombre)}</span><span class="pad" style="background:${st.padBg}"></span>`;
   hacerArrastrable(b,n,i);t.appendChild(b)});
  const av=document.getElementById('avatarPrev');
  av.innerHTML=P.avatarImg?`<img src="${P.avatarImg}" alt="">`:esc(P.avatar);
@@ -397,7 +413,15 @@ function pintarTablero(){
  av.style.display=EA().nodos.length?'block':'none';
  document.getElementById('tableroVacio').style.display=EA().nodos.length?'none':'flex';
  av.style.left=viajero.x+'%';av.style.top=(viajero.y-9)+'%';
- av.style.transform=`translate(-50%,-50%) scale(${viajero.s??1})`}
+ av.style.transform=`translate(-50%,-50%) scale(${viajero.s??1})`;
+ pintarChecklist()}
+
+function pintarChecklist(){const c=document.getElementById('checklist');
+ const fondo=P.escenas.some(e=>e.fondoImg),
+  nodos=P.escenas.reduce((s,e)=>s+e.nodos.length,0)>0,
+  cont=P.escenas.some(e=>e.nodos.some(n=>n.pantallas.some(p=>(p.titulo||'').trim()||p.vinetas.length)));
+ const it=(ok,t)=>`<span class="${ok?'ok':''}">${ok?'✓':'○'} ${t}</span>`;
+ c.innerHTML=it(fondo,'Fondo')+it(nodos,'Nodos')+it(cont,'Contenido')}
 
 function hacerArrastrable(el,n,i){
  let drag=false,movio=false;
@@ -597,7 +621,8 @@ function presentar(){leerCampos();modoAjuste=false;
   <div class="sub" style="color:${P.paleta.acento}">${esc(P.metafora)}</div>
   <button class="btn" style="margin-top:3rem;border-color:${P.paleta.acento};color:${P.paleta.acento}" onclick="abrirTablero()">Iniciar la travesía →</button>`;
  document.getElementById('interior').classList.remove('on');sIdx=-1;
- document.getElementById('show').requestFullscreen?.().catch(()=>{})}
+ document.getElementById('show').requestFullscreen?.().catch(()=>{});
+ despertarShow()}
 function abrirTablero(){const po=document.getElementById('portada');po.style.opacity=0;po.style.pointerEvents='none'}
 
 function renderEscenaShow(reset){
@@ -608,7 +633,7 @@ function renderEscenaShow(reset){
   b.style.left=n.x+'%';b.style.top=n.y+'%';b.style.width='11%';
   b.style.borderColor=st.borde;b.style.background=st.relleno;
   b.innerHTML=`<span class="num" style="color:${st.acento}">${String(numOffset(escShow)+i+1).padStart(2,'0')}</span>
-   <span class="eti-n" style="color:${st.texto}">${esc(n.nombre)}</span><span class="pad" style="background:${st.padBg}"></span>`;
+   <span class="eti-n" style="color:${st.texto}${n.nombre.length>9?';font-size:1.7cqh':''}">${esc(n.nombre)}</span><span class="pad" style="background:${st.padBg}"></span>`;
   if(modoAjuste){b.style.cursor='grab';dragShow(b,n)}else{b.onclick=()=>viajarShow(i)}
   tab.appendChild(b)});
  const av=document.getElementById('showAvatar');
@@ -672,8 +697,9 @@ function pintarInterior(intro){
   ${p.vinetas.length?'<ul>'+p.vinetas.map(v=>'<li>'+esc(v)+'</li>').join('')+'</ul>':''}
   ${p.ancla?'<div class="ancla" style="color:'+st.acento+'">'+esc(p.ancla)+'</div>':''}
   <div id="showHud">
+   <span class="eti-esc" style="align-self:center;font-size:.72rem;letter-spacing:.15em;color:rgba(255,255,255,.6)">${sPant+1} / ${n.pantallas.length||1}</span>
    <button class="btn" onclick="pasarPant(-1)">← Anterior</button>
-   <button class="btn" onclick="pasarPant(1)">Siguiente →</button>
+   <button class="btn" onclick="pasarPant(1)">${sPant+1>=(n.pantallas.length||1)?'Al tablero →':'Siguiente →'}</button>
    <button class="btn" style="border-color:${st.acento};color:${st.acento}" onclick="volverTablero()">⌂ Volver al tablero</button>
   </div>`;
  if(intro){it.classList.add('morphIntro');
@@ -686,7 +712,8 @@ function volverTablero(){
  document.getElementById('interior').classList.remove('on');
  const tab=document.getElementById('showTab');
  setTimeout(()=>{tab.style.transform='scale(1)';tab.style.opacity=1},60);sIdx=-1}
-function cerrarShow(){document.getElementById('show').classList.remove('on');
+function cerrarShow(){clearTimeout(quietoT);
+ document.getElementById('show').classList.remove('on','quieto');
  document.exitFullscreen?.().catch(()=>{});
  const tab=document.getElementById('showTab');tab.style.transform='scale(1)';tab.style.opacity=1;sIdx=-1;
  if(modoAjuste){modoAjuste=false;escenaSel=escShow;sync()}}
@@ -780,6 +807,8 @@ function exportarHTML(){leerCampos();
  +'#interior ul{list-style:none;max-width:56ch;display:grid;gap:1.1rem}'
  +'#interior li{display:flex;gap:1rem;align-items:baseline;font-size:clamp(1rem,1.7vw,1.3rem);line-height:1.5;color:rgba(255,255,255,.92)}'
  +'#interior li:before{content:"◈";font-size:.8em;opacity:.9}'
+ +'@keyframes aparLi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}'
+ +'#interior.on li{animation:aparLi .45s both}#interior.on li:nth-child(2){animation-delay:.12s}#interior.on li:nth-child(3){animation-delay:.24s}#interior.on li:nth-child(4){animation-delay:.36s}#interior.on li:nth-child(5){animation-delay:.48s}'
  +'#interior .ancla{margin-top:2.2rem;font-weight:700;font-size:clamp(1rem,1.8vw,1.35rem)}'
  +'#interior .eti{transition:transform .9s cubic-bezier(.55,.05,.25,1);transform-origin:left top}'
  +'#interior.morphIntro .eti{transform:translate(26vw,24vh) scale(2.6)}'
@@ -821,7 +850,7 @@ function render(reset){const Ec=P.escenas[esc],t=document.getElementById('tab'),
  t.querySelectorAll('.burbuja').forEach(b=>b.remove());
  Ec.nodos.forEach((n,i)=>{const b=document.createElement('div');b.className='burbuja';
   b.style.left=n.x+'%';b.style.top=n.y+'%';b.style.borderColor=st.borde;b.style.background=st.relleno;
-  b.innerHTML='<span class="num" style="color:'+st.acento+'">'+String(off(esc)+i+1).padStart(2,'0')+'</span><span class="eti-n" style="color:'+st.texto+'">'+E(n.nombre)+'</span><span class="pad" style="background:'+st.padBg+'"></span>';
+  b.innerHTML='<span class="num" style="color:'+st.acento+'">'+String(off(esc)+i+1).padStart(2,'0')+'</span><span class="eti-n" style="color:'+st.texto+(n.nombre.length>9?';font-size:1.6cqh':'')+'">'+E(n.nombre)+'</span><span class="pad" style="background:'+st.padBg+'"></span>';
   b.onclick=()=>viajar(i);t.appendChild(b)});
  const a=document.getElementById('avatar');
  a.innerHTML=P.avatarImg?'<img src="'+P.avatarImg+'" alt="">':E(P.avatar);
@@ -869,8 +898,9 @@ function pinta(intro){const n=P.escenas[esc].nodos[sIdx],p=n.pantallas[sPant]||{
   '<h2>'+E(p.titulo)+'</h2>'+(p.vinetas.length?'<ul>'+p.vinetas.map(x=>'<li>'+E(x)+'</li>').join('')+'</ul>':'')+
   (p.ancla?'<div class="ancla" style="color:'+st.acento+'">'+E(p.ancla)+'</div>':'');
  const h=document.getElementById('hud');h.style.display='flex';
- h.innerHTML='<button style="border-color:rgba(255,255,255,.6);color:#fff" onclick="mv(-1)">←</button>'+
-  '<button style="border-color:rgba(255,255,255,.6);color:#fff" onclick="mv(1)">→</button>'+
+ h.innerHTML='<span style="align-self:center;font-size:.72rem;letter-spacing:.15em;color:rgba(255,255,255,.6)">'+(sPant+1)+' / '+(n.pantallas.length||1)+'</span>'+
+  '<button style="border-color:rgba(255,255,255,.6);color:#fff" onclick="mv(-1)">←</button>'+
+  '<button style="border-color:rgba(255,255,255,.6);color:#fff" onclick="mv(1)">'+(sPant+1>=(n.pantallas.length||1)?'⌂ →':'→')+'</button>'+
   '<button style="border-color:'+st.acento+';color:'+st.acento+'" onclick="volver()">⌂ Tablero</button>';
  if(intro){it.classList.add('morphIntro');
   requestAnimationFrame(()=>requestAnimationFrame(()=>it.classList.remove('morphIntro')))}}
@@ -885,6 +915,13 @@ init();`
  +'\n</scr'+'ipt></body></html>';
  descargar((P.nombre||'mundo').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-presentacion.html',html,'text/html');
  aviso('⬇ Presentación HTML exportada (multi-escena, con tus imágenes incluidas)')}
+
+/* ================== AUTO-OCULTAR CONTROLES EN SHOW ================== */
+let quietoT=null;
+function despertarShow(){const s=document.getElementById('show');
+ s.classList.remove('quieto');clearTimeout(quietoT);
+ if(!modoAjuste)quietoT=setTimeout(()=>s.classList.add('quieto'),3000)}
+document.getElementById('show').addEventListener('pointermove',despertarShow);
 
 /* ================== INIT ================== */
 P=proyectoBase();sync();

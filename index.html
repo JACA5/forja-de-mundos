@@ -438,7 +438,7 @@ async function analizarFondo(){
  if(!m){est.className='ia-estado err';est.textContent='Formato no reconocido.';return}
  const cuantos=Math.max(EA().nodos.length,3);
  try{
-  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+  const r=await fetch("/api/analyze",{method:"POST",
    headers:{"Content-Type":"application/json"},
    body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,
     messages:[{role:"user",content:[
@@ -479,7 +479,7 @@ Reglas: MÁXIMO 5 nodos por escena — si hay más temas, crea más escenas en e
   {type:"document",source:{type:"base64",media_type:"application/pdf",data:pdfAdjunto.data}},
   {type:"text",text:instr}]:instr;
  try{
-  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+  const r=await fetch("/api/generate",{method:"POST",
    headers:{"Content-Type":"application/json"},
    body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,
     messages:[{role:"user",content:contenido}]})});

@@ -123,7 +123,8 @@ label.file-btn:hover{border-color:var(--cian);color:var(--cian)}
  background:radial-gradient(ellipse at center,rgba(255,255,255,.95) 0%,rgba(232,192,107,.55) 45%,transparent 75%);filter:blur(1px)}
 .burbuja:active{cursor:grabbing}
 .burbuja.sel{box-shadow:0 0 0 3px var(--oro)}
-#avatarPrev{position:absolute;transform:translate(-50%,-50%);font-size:2.1rem;pointer-events:none;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45));z-index:5}
+#avatarPrev{position:absolute;transform:translate(-50%,-50%);font-size:2.1rem;cursor:grab;touch-action:none;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45));z-index:5}
+#avatarPrev:active{cursor:grabbing}
 #avatarPrev img{height:11cqh;display:block}
 #barraInfo{padding:.55rem 1.2rem;border-top:1px solid var(--linea);background:var(--panel);font-size:.72rem;color:var(--tenue);display:flex;gap:1.2rem;flex-shrink:0;flex-wrap:wrap}
 #barraInfo b{color:var(--cian)}
@@ -134,7 +135,9 @@ label.file-btn:hover{border-color:var(--cian);color:var(--cian)}
 #showTab{position:absolute;inset:0;transition:transform .9s cubic-bezier(.55,.05,.25,1),opacity .9s;container-type:size}
 #showFondo{position:absolute;inset:0;background-size:cover;background-position:center;transition:opacity .5s}
 #show .burbuja{cursor:pointer}
-#showAvatar{position:absolute;transform:translate(-50%,-50%);font-size:2.6rem;z-index:5;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+#showAvatar{position:absolute;transform:translate(-50%,-50%);font-size:2.6rem;z-index:5;pointer-events:none;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+#show.ajuste #showAvatar{pointer-events:auto;cursor:grab;touch-action:none}
+#show.ajuste #showAvatar:active{cursor:grabbing}
 #showAvatar img{height:16cqh;display:block}
 #escNav{position:absolute;top:1.3rem;left:50%;transform:translateX(-50%);z-index:8;display:flex;gap:.6rem;align-items:center}
 #escNav .btn{backdrop-filter:blur(6px);background:rgba(0,0,0,.35)}
@@ -321,6 +324,7 @@ dialog h3{font-family:'Fraunces',serif;margin-bottom:1rem}
 </ul>
 <h4>Personaje y burbujas</h4>
 <ul>
+<li><b>Arrastra el personaje</b> en el tablero (o en 🎯 Ajustar) para fijar su posición inicial en la escena; al hacer clic en un nodo, viaja hasta él y sigue la ruta normal.</li>
 <li>Selecciona un nodo y usa los deslizadores: <b>escala del personaje</b> (perspectiva) y <b>tamaño de la burbuja</b>.</li>
 <li>Sube PNG con transparencia para personaje propio + pose final de celebración.</li>
 </ul>
@@ -519,7 +523,10 @@ function pintarTablero(){
   hacerArrastrable(b,n,i);t.appendChild(b)});
  const av=document.getElementById('avatarPrev');
  av.innerHTML=P.avatarImg?`<img src="${P.avatarImg}" alt="">`:esc(P.avatar);
- if(!viajero.iniciado&&EA().nodos[0]){viajero.x=EA().nodos[0].x;viajero.y=EA().nodos[0].y;viajero.s=EA().nodos[0].esc??1;viajero.iniciado=true}
+ if(!viajero.iniciado&&EA().nodos[0]){const vi=EA().viajeroIni;
+  if(vi){viajero.x=vi.x;viajero.y=vi.y;viajero.s=1}
+  else{viajero.x=EA().nodos[0].x;viajero.y=EA().nodos[0].y;viajero.s=EA().nodos[0].esc??1}
+  viajero.iniciado=true}
  av.style.display=EA().nodos.length?'block':'none';
  document.getElementById('tableroVacio').style.display=EA().nodos.length?'none':'flex';
  av.style.left=viajero.x+'%';av.style.top=(viajero.y-9)+'%';
@@ -545,12 +552,41 @@ function hacerArrastrable(el,n,i){
  el.addEventListener('pointerup',()=>{drag=false;
   if(!movio){nodoSel=i;sync();irViajero(i)}else sync()})}
 
+/* El personaje se arrastra para fijar su posición inicial (guardada por escena
+   en viajeroIni; desde ahí parte el viaje en editor, presentación y export) */
+function dragAvatarEditor(){const el=document.getElementById('avatarPrev');let drag=false,movio=false;
+ el.addEventListener('pointerdown',e=>{drag=true;movio=false;
+  try{el.setPointerCapture(e.pointerId)}catch(_){}e.stopPropagation()});
+ el.addEventListener('pointermove',e=>{if(!drag)return;if(!movio)snap();movio=true;
+  if(viajero.anim)cancelAnimationFrame(viajero.anim);
+  const r=document.getElementById('tablero').getBoundingClientRect();
+  const x=Math.min(96,Math.max(4,(e.clientX-r.left)/r.width*100)),
+        y=Math.min(97,Math.max(11,(e.clientY-r.top)/r.height*100+9));
+  EA().viajeroIni={x,y};viajero.x=x;viajero.y=y;
+  el.style.left=x+'%';el.style.top=(y-9)+'%'});
+ el.addEventListener('pointerup',()=>{if(!drag)return;drag=false;
+  if(movio){sync();toast('📍 Posición inicial del personaje fijada','ok')}})}
+function dragAvatarShow(){const el=document.getElementById('showAvatar');let drag=false,movio=false;
+ el.addEventListener('pointerdown',e=>{if(!modoAjuste)return;drag=true;movio=false;
+  try{el.setPointerCapture(e.pointerId)}catch(_){}e.stopPropagation()});
+ el.addEventListener('pointermove',e=>{if(!drag)return;if(!movio)snap();movio=true;
+  const r=document.getElementById('showTab').getBoundingClientRect();
+  const x=Math.min(96,Math.max(4,(e.clientX-r.left)/r.width*100)),
+        y=Math.min(96,Math.max(10,(e.clientY-r.top)/r.height*100+8));
+  P.escenas[escShow].viajeroIni={x,y};sViajero={x,y,s:1};
+  el.style.left=x+'%';el.style.top=(y-8)+'%';
+  el.style.transform='translate(-50%,-50%) scale(1)'});
+ el.addEventListener('pointerup',()=>{drag=false})}
+
 function irViajero(destino){
  if(viajero.anim)cancelAnimationFrame(viajero.anim);
  const N=EA().nodos;let idx=0,md=1e9;
  N.forEach((n,i)=>{const d=(n.x-viajero.x)**2+(n.y-viajero.y)**2;if(d<md){md=d;idx=i}});
  const ruta=[];const dir=destino>idx?1:-1;
  for(let i=idx;i!==destino;i+=dir)ruta.push(N[i+dir]);
+ /* si el avatar está en un punto libre y el nodo más cercano es el destino,
+    la ruta queda vacía pero aún hay que caminar hasta él */
+ if(!ruta.length&&Math.hypot(N[destino].x-viajero.x,N[destino].y-viajero.y)>1.5)ruta.push(N[destino]);
  if(!ruta.length)return;
  const el=document.getElementById('avatarPrev');
  (function sig(){const s=ruta.shift();if(!s)return;
@@ -764,8 +800,10 @@ function renderEscenaShow(reset){
   tab.appendChild(b)});
  const av=document.getElementById('showAvatar');
  av.innerHTML=P.avatarImg?`<img src="${P.avatarImg}" alt="">`:esc(P.avatar);
- av.style.display=(modoAjuste||!E.nodos.length)?'none':'block';
- if(reset&&E.nodos[0]){sViajero={x:E.nodos[0].x,y:E.nodos[0].y,s:E.nodos[0].esc??1}}
+ av.style.display=E.nodos.length?'block':'none';
+ document.getElementById('show').classList.toggle('ajuste',modoAjuste);
+ if(reset&&E.nodos[0]){const vi=E.viajeroIni;
+  sViajero=vi?{x:vi.x,y:vi.y,s:1}:{x:E.nodos[0].x,y:E.nodos[0].y,s:E.nodos[0].esc??1}}
  av.style.left=sViajero.x+'%';av.style.top=(sViajero.y-8)+'%';
  av.style.transform=`translate(-50%,-50%) scale(${sViajero.s??1})`;
  const nav=document.getElementById('escNav');nav.innerHTML='';
@@ -775,7 +813,7 @@ function renderEscenaShow(reset){
    <span class="eti-esc">Escena ${escShow+1} / ${P.escenas.length}</span>
    <button class="btn" ${escShow===P.escenas.length-1?'disabled':''} onclick="cambiarEscena(1)">▶</button>`}
  if(modoAjuste){
-  h+=`<span class="eti-esc" style="color:${st.acento}">🎯 Modo ajuste — arrastra los nodos</span>
+  h+=`<span class="eti-esc" style="color:${st.acento}">🎯 Modo ajuste — arrastra los nodos y al personaje</span>
    <button class="btn" style="border-color:${st.acento};color:${st.acento}" onclick="terminarAjuste()">✓ Terminar</button>`}
  nav.innerHTML=h}
 function cambiarEscena(d){
@@ -790,6 +828,7 @@ function viajarShow(destino){
  let idx=0,md=1e9;N.forEach((n,i)=>{const q=(n.x-sViajero.x)**2+(n.y-sViajero.y)**2;if(q<md){md=q;idx=i}});
  const ruta=[];const dir=destino>idx?1:-1;
  for(let i=idx;i!==destino;i+=dir)ruta.push(N[i+dir]);
+ if(!ruta.length&&Math.hypot(N[destino].x-sViajero.x,N[destino].y-sViajero.y)>1.5)ruta.push(N[destino]);
  const esFinal=escShow===P.escenas.length-1&&destino===N.length-1;
  const fin=()=>{viajandoShow=false;
   if(esFinal){ /* pose de celebración — equivalente nativo del truco !! */
@@ -990,7 +1029,8 @@ function render(reset){const Ec=P.escenas[esc],t=document.getElementById('tab'),
  const a=document.getElementById('avatar');
  a.innerHTML=P.avatarImg?'<img src="'+P.avatarImg+'" alt="">':E(P.avatar);
  a.style.display=Ec.nodos.length?'block':'none';
- if(reset&&Ec.nodos[0])v={x:Ec.nodos[0].x,y:Ec.nodos[0].y,s:Ec.nodos[0].esc??1};
+ if(reset&&Ec.nodos[0]){const vi=Ec.viajeroIni;
+  v=vi?{x:vi.x,y:vi.y,s:1}:{x:Ec.nodos[0].x,y:Ec.nodos[0].y,s:Ec.nodos[0].esc??1}}
  a.style.left=v.x+'%';a.style.top=(v.y-8)+'%';
  a.style.transform='translate(-50%,-50%) scale('+(v.s??1)+')';
  const nav=document.getElementById('escNav');nav.innerHTML='';
@@ -1010,6 +1050,7 @@ function viajar(d){if(viajando)return;viajando=true;
  const N=P.escenas[esc].nodos,a=document.getElementById('avatar');
  let idx=0,md=1e9;N.forEach((n,i)=>{const q=(n.x-v.x)**2+(n.y-v.y)**2;if(q<md){md=q;idx=i}});
  const ruta=[];const dir=d>idx?1:-1;for(let i=idx;i!==d;i+=dir)ruta.push(N[i+dir]);
+ if(!ruta.length&&Math.hypot(N[d].x-v.x,N[d].y-v.y)>1.5)ruta.push(N[d]);
  const esFin=esc===P.escenas.length-1&&d===N.length-1;
  const fin=()=>{viajando=false;
   if(esFin){if(P.avatarImg2)a.innerHTML='<img src="'+P.avatarImg2+'" alt="">';
@@ -1070,6 +1111,7 @@ addEventListener('keydown',e=>{
 
 /* ================== INIT ================== */
 document.getElementById('logoJA').innerHTML=LOGO_SVG;
+dragAvatarEditor();dragAvatarShow();
 P=proyectoBase();sync();
 /* Recuperación de borrador: banner no bloqueante (un confirm() aquí congela la carga) */
 try{const b=localStorage.getItem('forja:__borrador');

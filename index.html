@@ -269,6 +269,7 @@ dialog h3{font-family:'Fraunces',serif;margin-bottom:1rem}
     <span>Clic en burbuja: <b>editar nodo</b> (el viajero navega)</span>
     <span id="infoNodos"></span>
     <span style="flex:1"></span>
+    <span id="pesoProy" title="Peso del proyecto vs. límite de guardado"></span>
     <span class="chk" id="checklist"></span>
     <button class="btn" style="padding:.3rem .7rem" onclick="ajustar()">🎯 Ajustar a pantalla completa</button>
   </div>
@@ -310,6 +311,26 @@ const LOGO_SVG=`<svg width="16" height="19" viewBox="0 0 100 118" xmlns="http://
 <path d="M12 50 L12 70 Q13 81 26 89 L45 100 L79 84"/>
 </g></svg>`;
 let P=null,escenaSel=0,nodoSel=0,viajero={x:0,y:0,anim:null,iniciado:false},pdfAdjunto=null;
+
+/* Historial para deshacer (Ctrl+Z) */
+const HIST=[];
+function snap(){try{const j=JSON.stringify(P);HIST.push(j);
+ const max=j.length>4e6?3:15;while(HIST.length>max)HIST.shift()}catch(e){}}
+
+/* window.storage existe solo en el sandbox de claude.ai; en producción usamos localStorage */
+if(!window.storage){window.storage={
+ async set(k,v){localStorage.setItem(k,v)},
+ async get(k){const v=localStorage.getItem(k);if(v===null)throw new Error('no existe');return{value:v}},
+ async list(pre){return{keys:Object.keys(localStorage).filter(k=>k.startsWith(pre)&&k!=='forja:__borrador')}}}}
+
+/* Autoguardado de borrador + indicador de peso */
+let autoT=null;
+function autoguardar(){clearTimeout(autoT);autoT=setTimeout(()=>{try{
+ const j=JSON.stringify(P);pintarPeso(j.length);
+ if(j.length<4.5e6)localStorage.setItem('forja:__borrador',j)}catch(e){}},1200)}
+function pintarPeso(n){const e=document.getElementById('pesoProy');
+ e.textContent=(n/1e6).toFixed(1)+' / 4.5 MB';
+ e.style.color=n>4.5e6?'var(--rojo)':(n>3.5e6?'var(--oro)':'var(--tenue)')}
 
 function EA(){return P.escenas[escenaSel]}
 function numOffset(ei){let s=0;for(let i=0;i<ei;i++)s+=P.escenas[i].nodos.length;return s}
@@ -353,7 +374,7 @@ function pintarEscenas(){
   if(extra){const n=document.createElement('button');n.className='chip';n.textContent='＋ escena';
    n.onclick=()=>{P.escenas.push({fondoImg:EA().fondoImg,nodos:[]});escenaSel=P.escenas.length-1;nodoSel=0;sync()};cont.appendChild(n);
    if(P.escenas.length>1){const q=document.createElement('button');q.className='chip';q.textContent='✕ borrar escena';
-    q.onclick=()=>{if(confirm('¿Borrar la escena actual y sus nodos?')){P.escenas.splice(escenaSel,1);escenaSel=0;nodoSel=0;sync()}};cont.appendChild(q)}}};
+    q.onclick=()=>{if(confirm('¿Borrar la escena actual y sus nodos?')){snap();P.escenas.splice(escenaSel,1);escenaSel=0;nodoSel=0;sync()}};cont.appendChild(q)}}};
  mk(document.getElementById('chipsEscenas'),true);
  mk(document.getElementById('escenasBar'),true);
  document.getElementById('lblEscena').textContent='Escena '+(escenaSel+1)}
@@ -384,14 +405,14 @@ function pintarPantallas(){
  h+=`<button class="add" onclick="EA().nodos[${nodoSel}].pantallas.push({titulo:'',vinetas:[],ancla:''});sync()">＋ pantalla</button>`;
  e.innerHTML=h}
 
-function agregarNodo(){
+function agregarNodo(){snap();
  if(EA().nodos.length>=5){
   P.escenas.splice(escenaSel+1,0,{fondoImg:EA().fondoImg,nodos:[]});
   escenaSel++;aviso('✦ Escena '+(escenaSel+1)+' creada automáticamente (límite de 5 nodos por escena)')}
  EA().nodos.push({nombre:"NODO "+(numOffset(escenaSel)+EA().nodos.length+1),x:20+Math.random()*60,y:25+Math.random()*50,
   pantallas:[{titulo:"",vinetas:[],ancla:""}]});
  nodoSel=EA().nodos.length-1;sync()}
-function borrarNodo(i){EA().nodos.splice(i,1);nodoSel=Math.max(0,nodoSel-1);sync()}
+function borrarNodo(i){snap();EA().nodos.splice(i,1);nodoSel=Math.max(0,nodoSel-1);sync()}
 
 /* ================== PREVIEW ================== */
 function fondoCSS(p){return `radial-gradient(120% 90% at 20% 0%, ${p.fondo2}55 0%, transparent 60%),linear-gradient(180deg, ${p.fondo2} 0%, ${p.fondo} 70%, #000 140%)`}
@@ -438,12 +459,13 @@ function pintarChecklist(){const c=document.getElementById('checklist');
   nodos=P.escenas.reduce((s,e)=>s+e.nodos.length,0)>0,
   cont=P.escenas.some(e=>e.nodos.some(n=>n.pantallas.some(p=>(p.titulo||'').trim()||p.vinetas.length)));
  const it=(ok,t)=>`<span class="${ok?'ok':''}">${ok?'✓':'○'} ${t}</span>`;
- c.innerHTML=it(fondo,'Fondo')+it(nodos,'Nodos')+it(cont,'Contenido')}
+ c.innerHTML=it(fondo,'Fondo')+it(nodos,'Nodos')+it(cont,'Contenido');
+ autoguardar()}
 
 function hacerArrastrable(el,n,i){
  let drag=false,movio=false;
  el.addEventListener('pointerdown',e=>{drag=true;movio=false;el.setPointerCapture(e.pointerId)});
- el.addEventListener('pointermove',e=>{if(!drag)return;movio=true;
+ el.addEventListener('pointermove',e=>{if(!drag)return;if(!movio)snap();movio=true;
   const r=document.getElementById('tablero').getBoundingClientRect();
   n.x=Math.min(96,Math.max(4,(e.clientX-r.left)/r.width*100));
   n.y=Math.min(88,Math.max(10,(e.clientY-r.top)/r.height*100));
@@ -542,6 +564,7 @@ Responde SOLO con JSON: {"posiciones":[{"x":18,"y":62,"esc":0.9}],"estilo":{"ace
   const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").replace(/```json|```/g,"").trim();
   const j=JSON.parse(txt.slice(txt.indexOf('{'),txt.lastIndexOf('}')+1));
   if(!j.posiciones||!j.posiciones.length)throw new Error('sin posiciones');
+  snap();
   if(j.estilo)EA().estilo=j.estilo;
   while(EA().nodos.length<j.posiciones.length&&EA().nodos.length<5)
    EA().nodos.push({nombre:"NODO "+(numOffset(escenaSel)+EA().nodos.length+1),x:50,y:50,pantallas:[{titulo:"",vinetas:[],ancla:""}]});
@@ -583,6 +606,7 @@ Reglas: MÁXIMO 5 nodos por escena — si hay más temas, crea más escenas en e
   const j=JSON.parse(txt.slice(txt.indexOf('{'),txt.lastIndexOf('}')+1));
   let escenas=j.escenas||(j.nodos?[{nodos:j.nodos}]:null);
   if(!escenas||!escenas.length)throw new Error("sin escenas");
+  snap();
   const fondoPrevio=EA().fondoImg;
   P.metafora=j.metafora||P.metafora;
   P.escenas=escenas.map(e=>({fondoImg:fondoPrevio,nodos:(e.nodos||[]).slice(0,5).map(n=>({
@@ -621,7 +645,7 @@ function ajustar(){leerCampos();modoAjuste=true;
 function terminarAjuste(){modoAjuste=false;cerrarShow();escenaSel=escShow;sync();
  aviso('🎯 Posiciones guardadas desde el Modo Ajuste')}
 function dragShow(el,n){let drag=false;
- el.addEventListener('pointerdown',e=>{drag=true;el.setPointerCapture(e.pointerId);e.stopPropagation()});
+ el.addEventListener('pointerdown',e=>{drag=true;snap();el.setPointerCapture(e.pointerId);e.stopPropagation()});
  el.addEventListener('pointermove',e=>{if(!drag)return;
   const r=document.getElementById('showTab').getBoundingClientRect();
   n.x=Math.min(96,Math.max(4,(e.clientX-r.left)/r.width*100));
@@ -746,6 +770,7 @@ async function guardar(){leerCampos();
   const json=JSON.stringify(P);
   if(json.length>4.5e6){aviso('⚠ El proyecto supera el límite de guardado (~4.5 MB). Usa imágenes más livianas (JPG comprimido).');return}
   await window.storage.set('forja:'+slug,json);
+  localStorage.removeItem('forja:__borrador');
   aviso('💾 Guardado como «'+P.nombre+'»')}catch(e){aviso('✕ No se pudo guardar ('+e.message+')')}}
 async function abrirCargar(){
  const l=document.getElementById('listaProy');l.innerHTML='<p class="nota">Cargando…</p>';
@@ -755,12 +780,14 @@ async function abrirCargar(){
   if(!r||!r.keys||!r.keys.length){l.innerHTML='<p class="nota">No hay proyectos guardados aún.</p>';return}
   r.keys.forEach(k=>{const b=document.createElement('button');b.className='btn';
    b.textContent='🌍 '+k.replace('forja:','');
-   b.onclick=async()=>{try{const g=await window.storage.get(k);P=migrar(JSON.parse(g.value));
+   b.onclick=async()=>{try{const g=await window.storage.get(k);snap();P=migrar(JSON.parse(g.value));
     escenaSel=0;nodoSel=0;viajero.iniciado=false;sync();
     document.getElementById('dlgCargar').close()}catch(e){aviso('✕ Error al cargar')}};
    l.appendChild(b)})}
  catch(e){l.innerHTML='<p class="nota" style="color:var(--rojo)">Almacenamiento no disponible aquí.</p>'}}
-function nuevoProyecto(){P=proyectoBase();P.nombre='Nuevo Mundo';P.escenas=[{fondoImg:null,nodos:[]}];
+function nuevoProyecto(){
+ if(!confirm('¿Crear un mundo nuevo? El actual se descarta (puedes recuperarlo con Ctrl+Z).'))return;
+ snap();P=proyectoBase();P.nombre='Nuevo Mundo';P.escenas=[{fondoImg:null,nodos:[]}];
  escenaSel=0;nodoSel=0;viajero.iniciado=false;pdfAdjunto=null;
  document.getElementById('pdfInfo').textContent='';sync()}
 function toast(t,tipo){const e=document.getElementById('toast');
@@ -944,9 +971,22 @@ function despertarShow(){const s=document.getElementById('show');
  if(!modoAjuste)quietoT=setTimeout(()=>s.classList.add('quieto'),3000)}
 document.getElementById('show').addEventListener('pointermove',despertarShow);
 
+/* ================== DESHACER (Ctrl+Z) ================== */
+addEventListener('keydown',e=>{
+ if((e.metaKey||e.ctrlKey)&&!e.shiftKey&&e.key.toLowerCase()==='z'){
+  const t=e.target.tagName;if(t==='INPUT'||t==='TEXTAREA')return;
+  if(!HIST.length)return;e.preventDefault();
+  P=migrar(JSON.parse(HIST.pop()));
+  escenaSel=Math.min(escenaSel,P.escenas.length-1);nodoSel=0;viajero.iniciado=false;sync();
+  toast('↩ Cambio deshecho','ok')}});
+
 /* ================== INIT ================== */
 document.getElementById('logoJA').innerHTML=LOGO_SVG;
-P=proyectoBase();sync();
+P=proyectoBase();
+try{const b=localStorage.getItem('forja:__borrador');
+ if(b&&b!==JSON.stringify(proyectoBase())){const bp=migrar(JSON.parse(b));
+  if(bp.nombre&&confirm('Hay un borrador sin guardar («'+bp.nombre+'»). ¿Recuperarlo?'))P=bp}}catch(e){}
+sync();
 </script>
 </body>
 </html>

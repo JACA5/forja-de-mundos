@@ -79,6 +79,12 @@ label.file-btn:hover{border-color:var(--cian);color:var(--cian)}
 #barraInfo .chk span{color:var(--tenue)}
 #barraInfo .chk span.ok{color:var(--ok)}
 
+/* crédito de autor */
+.credito{display:flex;align-items:center;gap:.45rem;font-size:.64rem;color:var(--tenue);letter-spacing:.05em;white-space:nowrap}
+.credito svg{display:block;opacity:.9}
+.creditoShow{position:absolute;bottom:1.1rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.55rem;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);z-index:1}
+.creditoShow svg{opacity:.85}
+
 /* presentación: controles se ocultan tras inactividad; viñetas con stagger */
 #salirShow,#escNav{transition:opacity .4s}
 #show.quieto #salirShow,#show.quieto #escNav{opacity:0;pointer-events:none}
@@ -162,6 +168,7 @@ dialog h3{font-family:'Fraunces',serif;margin-bottom:1rem}
   <button class="btn" onclick="exportarPaquete()">📦 Paquete .md</button>
   <button class="btn primario" onclick="exportarHTML()">⬇ Exportar HTML</button>
   <button class="btn presentar" onclick="presentar()">▶ Presentar</button>
+  <span class="credito"><span id="logoJA"></span>por Jorge Andrés Casas Acero</span>
 </header>
 
 <main>
@@ -292,6 +299,16 @@ const PRESETS=[
  {n:"Natural",fondo:"#14201A",fondo2:"#28503C",tinta:"#F0EBDD",acento:"#E3A24B",acento2:"#8FD18C",av:"🦉"},
  {n:"Cósmica",fondo:"#070A1C",fondo2:"#241a4e",tinta:"#EDEAF7",acento:"#F5D97A",acento2:"#9C7BFF",av:"🚀"}];
 const AVATARES=["🐢","🧭","🤖","🦉","🚀","🐋","🦋","⛵","🔦","🐉"];
+/* Monograma JA (Jorge Andrés Casas Acero) — recreación vectorial del logo */
+const LOGO_SVG=`<svg width="16" height="19" viewBox="0 0 100 118" xmlns="http://www.w3.org/2000/svg" aria-label="JA">
+<defs><linearGradient id="lgja" x1="0" y1="0" x2=".75" y2="1">
+<stop offset="0" stop-color="#F7E08A"/><stop offset=".45" stop-color="#E8B54D"/><stop offset="1" stop-color="#8F6A16"/></linearGradient></defs>
+<g fill="none" stroke="url(#lgja)" stroke-width="9" stroke-linejoin="miter" stroke-miterlimit="4">
+<path d="M20 72 L44 6 L57 38"/>
+<path d="M38 86 L58 36 L79 84"/>
+<path d="M48 64 L70 64"/>
+<path d="M12 50 L12 70 Q13 81 26 89 L45 100 L79 84"/>
+</g></svg>`;
 let P=null,escenaSel=0,nodoSel=0,viajero={x:0,y:0,anim:null,iniciado:false},pdfAdjunto=null;
 
 function EA(){return P.escenas[escenaSel]}
@@ -619,7 +636,8 @@ function presentar(){leerCampos();modoAjuste=false;
  aplicarFondo(po,P.escenas[0]);po.style.opacity=1;po.style.pointerEvents='auto';po.style.color=P.paleta.tinta;
  po.innerHTML=`<div class="velo"></div><h1>${esc(P.nombre)}</h1>
   <div class="sub" style="color:${P.paleta.acento}">${esc(P.metafora)}</div>
-  <button class="btn" style="margin-top:3rem;border-color:${P.paleta.acento};color:${P.paleta.acento}" onclick="abrirTablero()">Iniciar la travesía →</button>`;
+  <button class="btn" style="margin-top:3rem;border-color:${P.paleta.acento};color:${P.paleta.acento}" onclick="abrirTablero()">Iniciar la travesía →</button>
+  <div class="creditoShow">${LOGO_SVG} Realizado por Jorge Andrés Casas Acero</div>`;
  document.getElementById('interior').classList.remove('on');sIdx=-1;
  document.getElementById('show').requestFullscreen?.().catch(()=>{});
  despertarShow()}
@@ -795,6 +813,7 @@ function exportarHTML(){leerCampos();
  +'#portada{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;transition:opacity .8s;z-index:8;background-size:cover;background-position:center}'
  +'#portada>*{position:relative;z-index:1}#portada h1{font-weight:700;font-size:clamp(3rem,8vw,6.5rem);color:#fff}'
  +'#portada .sub{letter-spacing:.4em;text-transform:uppercase;margin-top:1.2rem;font-size:clamp(.68rem,1.3vw,.95rem)}'
+ +'.creditoShow{position:absolute;bottom:1.1rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.55rem;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);z-index:1}.creditoShow svg{opacity:.85}'
  +'button{background:rgba(0,0,0,.35);border:1px solid;padding:.7rem 1.6rem;border-radius:6px;font-family:inherit;font-size:.8rem;cursor:pointer;letter-spacing:.1em;backdrop-filter:blur(6px)}'
  +'#escNav{position:fixed;top:1.3rem;left:50%;transform:translateX(-50%);z-index:7;display:flex;gap:.6rem;align-items:center}'
  +'#escNav span{font-size:.72rem;letter-spacing:.2em;color:rgba(255,255,255,.7);text-transform:uppercase}'
@@ -820,6 +839,7 @@ function exportarHTML(){leerCampos();
  +'<div id="escNav"></div><div id="portada"></div><div id="interior"></div><div id="hud"></div>'
  +'<scr'+'ipt>\n'
  +'const P='+datos+';\n'
+ +'const LOGOJA='+JSON.stringify(LOGO_SVG)+';\n'
  +String.raw`let v={x:0,y:0},viajando=false,sIdx=-1,sPant=0,esc=0;
 const F=p=>'radial-gradient(120% 90% at 20% 0%, '+p.fondo2+'55 0%, transparent 60%),linear-gradient(180deg,'+p.fondo2+' 0%,'+p.fondo+' 70%,#000 140%)';
 const E=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
@@ -868,7 +888,8 @@ function cambiar(d){const n=esc+d;if(n<0||n>=P.escenas.length)return;
 function init(){render(true);
  const po=document.getElementById('portada');fondoDe(po,P.escenas[0]);po.style.color=P.paleta.tinta;
  po.innerHTML='<div class="velo"></div><h1>'+E(P.nombre)+'</h1><div class="sub" style="color:'+P.paleta.acento+'">'+E(P.metafora)+'</div>'+
-  '<button style="margin-top:3rem;border-color:'+P.paleta.acento+';color:'+P.paleta.acento+'" onclick="ab()">Iniciar la travesía →</button>'}
+  '<button style="margin-top:3rem;border-color:'+P.paleta.acento+';color:'+P.paleta.acento+'" onclick="ab()">Iniciar la travesía →</button>'+
+  '<div class="creditoShow">'+LOGOJA+' Realizado por Jorge Andrés Casas Acero</div>'}
 function ab(){const p=document.getElementById('portada');p.style.opacity=0;p.style.pointerEvents='none'}
 function viajar(d){if(viajando)return;viajando=true;
  const N=P.escenas[esc].nodos,a=document.getElementById('avatar');
@@ -924,6 +945,7 @@ function despertarShow(){const s=document.getElementById('show');
 document.getElementById('show').addEventListener('pointermove',despertarShow);
 
 /* ================== INIT ================== */
+document.getElementById('logoJA').innerHTML=LOGO_SVG;
 P=proyectoBase();sync();
 </script>
 </body>

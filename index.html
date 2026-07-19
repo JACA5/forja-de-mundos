@@ -52,6 +52,28 @@ aside{background:var(--panel);border-right:1px solid var(--linea);display:flex;f
 .nota{font-size:.72rem;color:var(--tenue);line-height:1.5;margin-top:.4rem}
 #pdfInfo{font-size:.76rem;color:var(--ok);margin-top:.4rem}
 
+/* sidebar: grupos colapsables, file inputs y colores etiquetados */
+details.grupo{border:1px solid var(--linea);border-radius:8px;margin-bottom:.7rem;background:var(--panel2)}
+details.grupo summary{cursor:pointer;list-style:none;padding:.6rem .8rem;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--oro);display:flex;align-items:center;gap:.5rem;user-select:none}
+details.grupo summary::-webkit-details-marker{display:none}
+details.grupo summary::before{content:"▸";color:var(--tenue);transition:transform .2s}
+details.grupo[open] summary::before{transform:rotate(90deg)}
+details.grupo .cuerpo{padding:0 .8rem .8rem}
+input[type=file]{display:none}
+label.file-btn{display:flex;align-items:center;gap:.5rem;width:100%;border:1px dashed var(--linea);background:var(--bg);color:var(--tenue);padding:.55rem .8rem;border-radius:8px;font-size:.78rem;cursor:pointer;transition:.2s;text-transform:none;letter-spacing:0;margin:.15rem 0 0}
+label.file-btn:hover{border-color:var(--cian);color:var(--cian)}
+.colores .col{display:flex;flex-direction:column;align-items:center;gap:.25rem;font-size:.56rem;letter-spacing:.06em;text-transform:uppercase;color:var(--tenue)}
+.btn[disabled]{opacity:.5;cursor:wait;pointer-events:none}
+
+/* toast flotante + estado vacío del tablero */
+#toast{position:fixed;left:50%;bottom:4.2rem;transform:translate(-50%,12px);background:var(--panel2);border:1px solid var(--oro);color:var(--tinta);padding:.7rem 1.1rem;border-radius:8px;font-size:.82rem;z-index:80;opacity:0;pointer-events:none;transition:.3s;max-width:min(520px,90vw);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast.err{border-color:var(--rojo);color:var(--rojo)}
+#toast.ok{border-color:var(--ok)}
+#tableroVacio{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;color:rgba(255,255,255,.55);font-size:.9rem;text-align:center;padding:1.5rem;pointer-events:none}
+#tableroVacio .icono{font-size:1.8rem}
+#tableroVacio .sub{font-size:.74rem;color:rgba(255,255,255,.4);max-width:34ch;line-height:1.5}
+
 /* preview */
 #zonaPreview{display:flex;flex-direction:column;overflow:hidden}
 #escenasBar{display:flex;gap:.4rem;align-items:center;padding:.5rem 1.2rem;border-bottom:1px solid var(--linea);background:var(--panel);flex-shrink:0}
@@ -137,28 +159,49 @@ dialog h3{font-family:'Fraunces',serif;margin-bottom:1rem}
 
   <!-- MUNDO -->
   <div class="panel on" id="tab0">
-    <label>Metáfora espacial (el tablero)</label>
-    <textarea id="metafora" rows="2" placeholder="Ej.: sendero de piedra entre montañas…"></textarea>
-    <label>Atmósfera (paleta rápida)</label>
-    <div class="chips" id="presets"></div>
-    <label>Colores</label>
-    <div class="colores">
-      <input type="color" id="c_fondo"><input type="color" id="c_fondo2"><input type="color" id="c_tinta">
-      <input type="color" id="c_acento"><input type="color" id="c_acento2">
-    </div>
-    <label>Fondo de la escena actual (<span id="lblEscena">Escena 1</span>) — imagen · GIF animado · video en loop</label>
-    <input type="file" id="fFondo" accept="image/*,video/mp4,video/webm,video/quicktime" onchange="cargarFondo(this)">
-    <button class="btn" style="width:100%;margin-top:.5rem" onclick="analizarFondo()">🔍 IA: analizar fondo y ubicar nodos</button>
-    <div class="ia-estado" id="visEstado"></div>
-    <button class="mini-btn" onclick="EA().fondoImg=null;sync()" style="font-size:.72rem">✕ quitar fondo de esta escena</button>
-    <label>Personaje (PNG con transparencia)</label>
-    <input type="file" id="fAvatar" accept="image/*" onchange="cargarImgGlobal(this,'avatarImg')">
-    <button class="mini-btn" onclick="P.avatarImg=null;sync()" style="font-size:.72rem">✕ quitar personaje</button>
-    <label>Pose final del personaje (celebración · PNG — se usa al llegar al último nodo)</label>
-    <input type="file" id="fAvatar2" accept="image/*" onchange="cargarImgGlobal(this,'avatarImg2')">
-    <button class="mini-btn" onclick="P.avatarImg2=null;sync()" style="font-size:.72rem">✕ quitar pose final</button>
-    <label>Avatar viajero (si no subes personaje)</label>
-    <div class="chips" id="avatares"></div>
+    <details class="grupo" open>
+      <summary>Identidad</summary>
+      <div class="cuerpo">
+        <label style="margin-top:.4rem">Metáfora espacial (el tablero)</label>
+        <textarea id="metafora" rows="2" placeholder="Ej.: sendero de piedra entre montañas…"></textarea>
+        <label>Atmósfera (paleta rápida)</label>
+        <div class="chips" id="presets"></div>
+        <label>Colores</label>
+        <div class="colores">
+          <span class="col"><input type="color" id="c_fondo">Fondo</span>
+          <span class="col"><input type="color" id="c_fondo2">Fondo 2</span>
+          <span class="col"><input type="color" id="c_tinta">Tinta</span>
+          <span class="col"><input type="color" id="c_acento">Acento</span>
+          <span class="col"><input type="color" id="c_acento2">Acento 2</span>
+        </div>
+      </div>
+    </details>
+    <details class="grupo" open>
+      <summary>Escenario</summary>
+      <div class="cuerpo">
+        <label style="margin-top:.4rem">Fondo de la escena actual (<span id="lblEscena">Escena 1</span>) — imagen · GIF animado · video en loop</label>
+        <input type="file" id="fFondo" accept="image/*,video/mp4,video/webm,video/quicktime" onchange="cargarFondo(this)">
+        <label class="file-btn" for="fFondo">🖼 Subir fondo…</label>
+        <button class="btn" id="btnAnalizar" style="width:100%;margin-top:.5rem" onclick="analizarFondo()">🔍 IA: analizar fondo y ubicar nodos</button>
+        <div class="ia-estado" id="visEstado"></div>
+        <button class="mini-btn" onclick="EA().fondoImg=null;sync()" style="font-size:.72rem">✕ quitar fondo de esta escena</button>
+      </div>
+    </details>
+    <details class="grupo" open>
+      <summary>Personaje</summary>
+      <div class="cuerpo">
+        <label style="margin-top:.4rem">Personaje (PNG con transparencia)</label>
+        <input type="file" id="fAvatar" accept="image/*" onchange="cargarImgGlobal(this,'avatarImg')">
+        <label class="file-btn" for="fAvatar">🧍 Subir personaje…</label>
+        <button class="mini-btn" onclick="P.avatarImg=null;sync()" style="font-size:.72rem">✕ quitar personaje</button>
+        <label>Pose final del personaje (celebración · PNG — se usa al llegar al último nodo)</label>
+        <input type="file" id="fAvatar2" accept="image/*" onchange="cargarImgGlobal(this,'avatarImg2')">
+        <label class="file-btn" for="fAvatar2">🎉 Subir pose final…</label>
+        <button class="mini-btn" onclick="P.avatarImg2=null;sync()" style="font-size:.72rem">✕ quitar pose final</button>
+        <label>Avatar viajero (si no subes personaje)</label>
+        <div class="chips" id="avatares"></div>
+      </div>
+    </details>
   </div>
 
   <!-- NODOS -->
@@ -176,12 +219,13 @@ dialog h3{font-family:'Fraunces',serif;margin-bottom:1rem}
     <p class="nota" style="margin-top:0">La Forja usa Claude para transformar tu mundo en un guion espacial: escenas, nodos, copys y datos ancla. Si adjuntas un PDF, creará <b>un nodo por diapositiva o tema</b> del documento.</p>
     <label>📄 PDF fuente (opcional)</label>
     <input type="file" id="fPdf" accept="application/pdf" onchange="cargarPdf(this)">
+    <label class="file-btn" for="fPdf">📄 Adjuntar PDF…</label>
     <div id="pdfInfo"></div>
     <label>O pega texto fuente</label>
     <textarea id="fuente" rows="5" placeholder="Alternativa al PDF: pega aquí el contenido…"></textarea>
     <label>Indicación adicional (opcional)</label>
     <input id="iaExtra" placeholder="Ej.: nivel secundaria, tono lúdico…">
-    <button class="btn primario" style="width:100%;margin-top:1rem" onclick="generarIA()">⚡ Generar mundo con IA</button>
+    <button class="btn primario" id="btnGenerar" style="width:100%;margin-top:1rem" onclick="generarIA()">⚡ Generar mundo con IA</button>
     <button class="btn" style="width:100%;margin-top:.6rem" onclick="generarPrompts()">📋 Descargar prompts de imágenes (.md)</button>
     <div class="ia-estado" id="iaEstado"></div>
   </div>
@@ -194,6 +238,8 @@ dialog h3{font-family:'Fraunces',serif;margin-bottom:1rem}
     <div id="tablero">
       <div id="fondoTab"></div>
       <div id="avatarPrev">🐢</div>
+      <div id="tableroVacio"><span class="icono">⚒</span>Esta escena está vacía
+        <span class="sub">Sube un fondo y usa 🔍 para ubicar nodos, agrégalos en «Nodos», o genera todo con ⚡ IA</span></div>
     </div>
   </div>
   <div id="barraInfo">
@@ -214,6 +260,8 @@ dialog h3{font-family:'Fraunces',serif;margin-bottom:1rem}
   <div id="interior"></div>
   <button class="btn" id="salirShow" onclick="cerrarShow()">✕ Salir</button>
 </div>
+
+<div id="toast"></div>
 
 <dialog id="dlgCargar"><h3>Proyectos guardados</h3><div class="lista-proy" id="listaProy"></div>
 <button class="btn" onclick="dlgCargar.close()" style="margin-top:.6rem">Cerrar</button></dialog>
@@ -347,6 +395,7 @@ function pintarTablero(){
  av.innerHTML=P.avatarImg?`<img src="${P.avatarImg}" alt="">`:esc(P.avatar);
  if(!viajero.iniciado&&EA().nodos[0]){viajero.x=EA().nodos[0].x;viajero.y=EA().nodos[0].y;viajero.s=EA().nodos[0].esc??1;viajero.iniciado=true}
  av.style.display=EA().nodos.length?'block':'none';
+ document.getElementById('tableroVacio').style.display=EA().nodos.length?'none':'flex';
  av.style.left=viajero.x+'%';av.style.top=(viajero.y-9)+'%';
  av.style.transform=`translate(-50%,-50%) scale(${viajero.s??1})`}
 
@@ -437,6 +486,7 @@ async function analizarFondo(){
  const m=imgAnalizar.match(/^data:(.*?);base64,(.*)$/);
  if(!m){est.className='ia-estado err';est.textContent='Formato no reconocido.';return}
  const cuantos=Math.max(EA().nodos.length,3);
+ const btn=document.getElementById('btnAnalizar');btn.disabled=true;
  try{
   const r=await fetch("/api/analyze",{method:"POST",
    headers:{"Content-Type":"application/json"},
@@ -458,12 +508,16 @@ Responde SOLO con JSON: {"posiciones":[{"x":18,"y":62,"esc":0.9}],"estilo":{"ace
    if(p.esc)n.esc=Math.min(1.5,Math.max(.5,+p.esc||1))}});
   viajero.iniciado=false;sync();
   est.className='ia-estado ok';est.textContent='✓ Nodos ubicados sobre el recorrido y estilo visual derivado de la imagen (colores del mismo universo). Ajusta con 🎯 si quieres precisión total.';
- }catch(e){est.className='ia-estado err';est.textContent='✕ No se pudo analizar ('+e.message+'). Reintenta.'}}
+  toast('✓ Nodos ubicados con IA sobre el recorrido de la imagen','ok');
+ }catch(e){est.className='ia-estado err';est.textContent='✕ No se pudo analizar ('+e.message+'). Reintenta.';
+  toast('✕ No se pudo analizar el fondo ('+e.message+')','err')}
+ btn.disabled=false}
 
 /* ================== GENERACIÓN IA (con PDF) ================== */
 async function generarIA(){
  leerCampos();
  const est=document.getElementById('iaEstado');est.className='ia-estado';est.textContent='⚒ La Forja está trabajando…';
+ const btn=document.getElementById('btnGenerar');btn.disabled=true;
  const fuente=document.getElementById('fuente').value.trim();
  const extra=document.getElementById('iaExtra').value.trim();
  const instr=`Eres el Motor de Inteligencia Narrativa de "Forja de Mundos". Transforma el encargo en un guion espacial para una presentación no lineal.
@@ -496,8 +550,11 @@ Reglas: MÁXIMO 5 nodos por escena — si hay más temas, crea más escenas en e
   escenaSel=0;nodoSel=0;viajero.iniciado=false;sync();
   const tot=P.escenas.reduce((s,e)=>s+e.nodos.length,0);
   est.className='ia-estado ok';est.textContent=`✓ Mundo generado: ${tot} nodos en ${P.escenas.length} escena(s). ${P.escenas.length>1?'Cada escena hereda el fondo actual; puedes subir un fondo alterno por escena en Mundo.':''} Si tienes fondo, usa 🔍 para ubicar los nodos.`;
+  toast(`✓ Mundo generado: ${tot} nodos en ${P.escenas.length} escena(s)`,'ok');
  }catch(err){est.className='ia-estado err';
-  est.textContent='✕ No se pudo generar ('+err.message+'). Si el PDF es muy largo, indica en "Indicación adicional" qué páginas priorizar.'}}
+  est.textContent='✕ No se pudo generar ('+err.message+'). Si el PDF es muy largo, indica en "Indicación adicional" qué páginas priorizar.';
+  toast('✕ No se pudo generar el mundo ('+err.message+')','err')}
+ btn.disabled=false}
 
 /* ================== MODO PRESENTACIÓN ================== */
 let escShow=0,sIdx=-1,sPant=0,sViajero={x:0,y:0},viajandoShow=false,modoAjuste=false;
@@ -661,7 +718,10 @@ async function abrirCargar(){
 function nuevoProyecto(){P=proyectoBase();P.nombre='Nuevo Mundo';P.escenas=[{fondoImg:null,nodos:[]}];
  escenaSel=0;nodoSel=0;viajero.iniciado=false;pdfAdjunto=null;
  document.getElementById('pdfInfo').textContent='';sync()}
-function aviso(t){const e=document.getElementById('iaEstado');e.className='ia-estado ok';e.textContent=t}
+function toast(t,tipo){const e=document.getElementById('toast');
+ e.textContent=t;e.className='on'+(tipo?' '+tipo:'');
+ clearTimeout(toast._t);toast._t=setTimeout(()=>{e.className=''},3800)}
+function aviso(t){const e=document.getElementById('iaEstado');e.className='ia-estado ok';e.textContent=t;toast(t,'ok')}
 
 /* ================== EXPORTACIONES ================== */
 function descargar(nombre,contenido,mime){
